@@ -1,0 +1,71 @@
+[tool.poetry]
+name = "taurus-executor"
+version = "1.0.1"
+description = "A high-performance, self-updating remote command execution system built with gRPC."
+authors = ["Taurus Contributors"]
+license = "AGPL-3.0-or-later"
+readme = "README.md"
+repository = "https://github.com/taurus-stack/taurus-executor"
+documentation = "https://github.com/taurus-stack/taurus-executor/docs"
+keywords = ["grpc", "remote-execution", "command-execution", "mtls", "devops"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: System :: Systems Administration",
+    "Topic :: System :: Distributed Computing",
+]
+packages = [
+    { include = "executor_core", from = "src" },
+]
+
+[[tool.poetry.source]]
+name = "aliyun"
+url = "https://mirrors.aliyun.com/pypi/simple/"
+priority = "primary"
+
+[tool.poetry.dependencies]
+python = ">=3.12.11,<3.16"
+grpcio = "^1.50.0"
+grpcio-tools = "^1.50.0"
+pydantic = "^2.0.0"
+pydantic-settings = "^2.0.0"
+aiohttp = "^3.8.0"
+paramiko = "^2.9.0"
+psutil = "^5.9.0"
+protobuf = "6.33.2"
+prometheus-client = "^0.23.1"
+aiofiles = "^22.1.0"
+rich = "^14.2.0"
+aiohttp-cors = "^0.8.1"
+pexpect = "^4.9.0"
+httpx = "^0.27.0"
+python-dotenv = "^1.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.0"
+pytest-asyncio = "^1.3.0"
+black = "*"
+isort = "*"
+mypy = "*"
+flake8 = "*"
+pyinstaller = "^6.0.0"
+
+[tool.poetry.scripts]
+client = "executor_core.main:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = "black"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

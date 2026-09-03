@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  taurus-executor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: taurus-executor
+    restart: unless-stopped
+    ports:
+      - "50051:50051"
+    environment:
+      - GRPC_HOST=0.0.0.0
+      - GRPC_PORT=50051
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+      - TAURUS_SERVER_URL=http://host.docker.internal:8000
+      - TAURUS_HOST_UUID=docker-host-uuid
+    volumes:
+      - ./tls:/opt/taurus-executor/tls:ro
+      - ./data:/opt/taurus-executor/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:50051/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - taurus-network
+
+  # Development service with hot-reload
+  taurus-executor-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: taurus-executor-dev
+    restart: unless-stopped
+    ports:
+      - "50052:50051"
+    environment:
+      - GRPC_HOST=0.0.0.0
+      - GRPC_PORT=50051
+      - LOG_LEVEL=DEBUG
+      - LOG_FORMAT=text
+      - TAURUS_SERVER_URL=http://host.docker.internal:8000
+      - TAURUS_HOST_UUID=docker-dev-uuid
+    volumes:
+      - ./src:/opt/taurus-executor/src:ro
+      - ./tls:/opt/taurus-executor/tls:ro
+      - ./data:/opt/taurus-executor/data
+    profiles:
+      - dev
+    networks:
+      - taurus-network
+
+networks:
+  taurus-network:
+    driver: bridge

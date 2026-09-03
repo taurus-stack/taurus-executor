@@ -1,0 +1,28 @@
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "taurus-client"
+version = "0.1.0"
+description = "A Python client library and CLI for the Taurus Executor."
+authors = ["Taurus Contributors"]
+license = "AGPL-3.0-or-later"
+readme = "README.md"
+repository = "https://github.com/taurus-stack/taurus-executor"
+packages = [{include = "."}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+grpcio = "^1.50.0"
+pydantic = "^1.10.0"
+rich = {version = "^12.0.0", optional = true}
+
+[tool.poetry.extras]
+cli = ["rich"]
+
+[tool.poetry.scripts]
+client-cli = "cli:main"
+
+[tool.black]
+line-length = 88

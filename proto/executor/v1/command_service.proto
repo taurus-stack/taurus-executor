@@ -1,0 +1,240 @@
+syntax = "proto3";
+
+package executor.v1;
+
+// Service definition
+service ClientService {
+  // Execute a command and stream output back in real-time
+  rpc ExecuteCommand(CommandRequest) returns (stream CommandResponse);
+
+  // Get client status
+  rpc GetStatus(StatusRequest) returns (StatusResponse);
+
+  // Trigger maintenance operations (update, restart, etc.)
+  rpc Maintenance(MaintenanceRequest) returns (MaintenanceResponse);
+
+  // Create an interactive session
+  rpc CreateSession(SessionRequest) returns (SessionResponse);
+
+  // Execute a command within a session
+  rpc ExecuteInSession(SessionCommandRequest) returns (stream CommandResponse);
+
+  // Close a session
+  rpc CloseSession(SessionCloseRequest) returns (SessionCloseResponse);
+
+  // List all active sessions
+  rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
+
+  // Send a signal to a running command (e.g., SIGSTOP/SIGCONT)
+  rpc SendSignal(SendSignalRequest) returns (SendSignalResponse);
+
+  // List all currently executing commands
+  rpc ListExecutions(ListExecutionsRequest) returns (ListExecutionsResponse);
+}
+
+// Command execution request
+message CommandRequest {
+  string command = 1;
+  repeated string args = 2;
+  map<string, string> environment = 3;
+  string working_directory = 4;
+  int32 timeout_seconds = 5;
+  bool merge_streams = 6;
+}
+
+// Command execution response (streaming)
+message CommandResponse {
+  oneof payload {
+    bytes stdout_chunk = 1;
+    bytes stderr_chunk = 2;
+  }
+  int32 exit_code = 3; // Only set when finished
+  bool finished = 4; // Flag indicating whether the stream has ended
+  string error_message = 5; // Set this field if an error occurs
+}
+
+// Status request
+message StatusRequest {}
+
+// Status response
+message StatusResponse {
+  string version = 1;
+  string uptime = 2;
+  string hostname = 3;
+  double cpu_usage = 4;
+  double memory_usage = 5;
+  double disk_usage = 6;
+  repeated double load_avg = 7; // 1, 5, 15 minute load averages
+}
+
+// Maintenance request
+message MaintenanceRequest {
+  oneof action {
+    UpdateRequest update = 1;
+    RestartRequest restart = 2;
+  }
+}
+
+message UpdateRequest {
+  string version = 1; // Target version, empty means update to latest
+  string update_server_url = 2;
+}
+
+message RestartRequest {}
+
+// Maintenance response
+message MaintenanceResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Session creation request
+message SessionRequest {
+  string username = 1; // Target username (optional, defaults to current user)
+  string password = 2; // Target user password (required when using su)
+  string working_directory = 3; // Initial working directory
+  map<string, string> environment = 4; // Environment variables
+  int32 timeout_seconds = 5; // Session timeout in seconds, 0 means no timeout
+  string shell = 6; // Shell to use, defaults to /bin/bash
+}
+
+// Session creation response
+message SessionResponse {
+  string session_id = 1;
+  bool success = 2;
+  string message = 3;
+}
+
+// Session command execution request
+message SessionCommandRequest {
+  string session_id = 1;
+  string command = 2;
+  int32 timeout_seconds = 3; // Command timeout
+}
+
+// Session close request
+message SessionCloseRequest {
+  string session_id = 1;
+}
+
+// Session close response
+message SessionCloseResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// List sessions request
+message ListSessionsRequest {}
+
+// Session information
+message SessionInfo {
+  string session_id = 1;
+  string username = 2;
+  string working_directory = 3;
+  int64 created_at = 4; // Unix timestamp
+  int64 last_active = 5; // Unix timestamp
+  bool is_alive = 6;
+}
+
+// List sessions response
+message ListSessionsResponse {
+  repeated SessionInfo sessions = 1;
+}
+
+// Send signal request
+message SendSignalRequest {
+  int32 pid = 1; // Process ID
+  int32 signal = 2; // Signal number (e.g., 19=SIGSTOP, 18=SIGCONT)
+}
+
+// Send signal response
+message SendSignalResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// List executions request
+message ListExecutionsRequest {}
+
+// Execution information
+message ExecutionInfo {
+  string execution_id = 1;
+  string command = 2;
+  repeated string args = 3;
+  int32 pid = 4;
+  string status = 5; // running, paused
+  int64 started_at = 6;
+}
+
+// List executions response
+message ListExecutionsResponse {
+  repeated ExecutionInfo executions = 1;
+}
+
+// ==================== File Transfer Service ====================
+
+service FileTransfer {
+  // Upload file to client (client-side streaming)
+  rpc UploadFile(stream UploadRequest) returns (UploadResponse);
+
+  // Download file from client (server-side streaming)
+  rpc DownloadFile(DownloadRequest) returns (stream DownloadResponse);
+
+  // List directory contents
+  rpc ListDirectory(ListDirectoryRequest) returns (ListDirectoryResponse);
+}
+
+// Upload request (chunked)
+message UploadRequest {
+  string file_path = 1; // Target file path
+  bytes chunk = 2; // Chunk data
+  bool is_last = 3; // Whether this is the last chunk
+  int64 total_size = 4; // Total file size
+  int32 chunk_index = 5; // Chunk sequence number (starting from 0)
+}
+
+// Upload response
+message UploadResponse {
+  bool success = 1;
+  string message = 2;
+  int64 bytes_received = 3;
+}
+
+// Download request
+message DownloadRequest {
+  string file_path = 1;
+  int64 offset = 2; // Resumable transfer offset
+  int64 chunk_size = 3; // Chunk size, default 65536
+}
+
+// Download response (chunked)
+message DownloadResponse {
+  bytes chunk = 1;
+  int64 offset = 2; // Current offset
+  bool is_last = 3; // Whether this is the last chunk
+  int64 total_size = 4; // Total file size
+  string file_name = 5; // File name
+}
+
+// List directory request
+message ListDirectoryRequest {
+  string path = 1;
+}
+
+// Directory entry information
+message DirEntry {
+  string name = 1;
+  int64 size = 2;
+  bool is_dir = 3;
+  int64 modified_at = 4; // Unix timestamp
+  string permissions = 5; // e.g., "drwxr-xr-x"
+  string owner = 6;
+  string group = 7;
+}
+
+// List directory response
+message ListDirectoryResponse {
+  string path = 1;
+  repeated DirEntry entries = 2;
+  string error = 3;
+}
