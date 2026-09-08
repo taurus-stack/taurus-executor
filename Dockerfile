@@ -1,5 +1,8 @@
 FROM python:3.12-slim AS builder
 
+ENV PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/ \
+    PIP_TRUSTED_HOST=mirrors.aliyun.com
+
 WORKDIR /app
 
 # Install Poetry
@@ -18,8 +21,9 @@ FROM python:3.12-slim AS runtime
 WORKDIR /opt/taurus-executor
 
 # Install runtime dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
+RUN sed -i 's|http://deb.debian.org/debian|https://mirrors.aliyun.com/debian|g' /etc/apt/sources.list.d/debian.sources \
+    && apt-get update && apt-get install -y --no-install-recommends \
+    curl make \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python dependencies from builder

@@ -96,7 +96,7 @@ test_fork_solution.py
 test_grpc_fork.py
 verify_fix.py
 verify_grpc_env.py
-poetry.lock
+# poetry.lock needed for deterministic install
 .git/
 .gitignore
 .gitattributes
@@ -111,6 +111,6 @@ jest.config.*
 babel.config.*
 *.md
 !README.md
-Makefile
+# Makefile needed for gRPC code generation
 CHANGELOG.md
 CONTRIBUTING.md
