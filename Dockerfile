@@ -8,10 +8,11 @@ WORKDIR /app
 # Install Poetry
 RUN pip install --no-cache-dir poetry==1.8.4
 
-# Copy dependency files
+# Copy dependency files and source (needed for poetry to install executor_core package)
 COPY pyproject.toml poetry.lock ./
+COPY src/ ./src/
 
-# Install dependencies
+# Install dependencies and the executor_core package itself
 RUN poetry config virtualenvs.create false \
     && poetry install --no-dev --no-interaction --no-ansi
 
@@ -23,7 +24,7 @@ WORKDIR /opt/taurus-executor
 # Install runtime dependencies
 RUN sed -i 's|http://deb.debian.org/debian|https://mirrors.aliyun.com/debian|g' /etc/apt/sources.list.d/debian.sources \
     && apt-get update && apt-get install -y --no-install-recommends \
-    curl make \
+    curl make openssl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python dependencies from builder
@@ -36,6 +37,8 @@ COPY proto/ ./proto/
 COPY scripts/ ./scripts/
 COPY manage/ ./manage/
 COPY Makefile ./
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
 
 # Generate gRPC code
 RUN make build-all
@@ -44,11 +47,12 @@ RUN make build-all
 RUN groupadd -r taurus && useradd -r -g taurus -d /opt/taurus-executor -s /sbin/nologin taurus
 RUN chown -R taurus:taurus /opt/taurus-executor
 
-# Switch to non-root user
-USER taurus
+# Entrypoint fixes volume permissions as root, then drops to taurus
+ENTRYPOINT ["/opt/taurus-executor/docker-entrypoint.sh"]
 
 # Environment variables
 ENV PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/opt/taurus-executor/src \
     GRPC_HOST=0.0.0.0 \
     GRPC_PORT=50051 \
     LOG_LEVEL=INFO \
